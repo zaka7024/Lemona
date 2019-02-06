@@ -18,7 +18,7 @@ class Lexer:
         if self.pos < len(self.text):
             self.current_char = self.text[self.pos]
         else:
-            self.error()
+            self.current_char = None
 
     def skip_white_space(self):
         while self.current_char is not None and self.current_char.isspace():
@@ -56,10 +56,20 @@ class Lexer:
                 self.advance()
                 return Token(DIVISION, "/")
 
+            if self.current_char == "(":
+                self.advance()
+                return Token(OPEN_PARENTHESES)
+
+            if self.current_char == ")":
+                self.advance()
+                return Token(CLOSE_PARENTHESES)
+
 
         return Token(EOF, EOF)
 if __name__ == "__main__":
-    lexer = Lexer("/ + ")
+    lexer = Lexer("132 + 100")
+    print(lexer.get_next_token())
+    print(lexer.get_next_token())
     print(lexer.get_next_token())
     print(lexer.get_next_token())
     print(lexer.get_next_token())
