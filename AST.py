@@ -22,8 +22,20 @@ class BinOp:
         self.right = right
 
 
+class CondOp:
+
+    def __init__(self, left, op, right):
+        self.type = op.type
+        self.op = op
+        self.left = left
+        self.right = right
+
+
 class Num:
 
     def __init__(self, node):
         self.token = node
         self.value = self.token.value
+
+    def __str__(self):
+        return "Num object"

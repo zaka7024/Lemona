@@ -73,6 +73,15 @@ class Lexer:
             if self.current_char == ")":
                 self.advance()
                 return Token(CLOSE_PARENTHESES, ')')
+
+            if self.current_char == ">":
+                self.advance()
+                return Token(MORE_THAN, '>')
+
+            if self.current_char == "<":
+                self.advance()
+                return Token(LESS_THAN, '<')
+
             self.error()
 
         return Token(EOF, EOF)
@@ -88,8 +97,6 @@ class Parser:
         raise Exception("Syntax Error")
 
     def eat(self, type):
-        print(f"type: {type}")
-        print(f"current token type: {self.current_token.type}")
         if self.current_token.type == type:
             self.current_token = self.lexer.get_next_token()
         else:
@@ -139,6 +146,14 @@ class Parser:
             node = BinOp(token, node, self.term())
         return node
 
+    def cond_expr(self):
+
+        left = self.expr()
+        op = self.current_token
+        self.eat(op.type)
+        right = self.expr()
+        return CondOp(left, op, right)
+
 
 class Interpreter(NodeVisitor):
 
@@ -161,9 +176,22 @@ class Interpreter(NodeVisitor):
 
     def visit_Num(self, token):
         return token.value
+
+    def visit_CondOp(self, node):
+        if node.type == MORE_THAN:
+            if self.visit(node.left) > self.visit(node.right):
+                return True
+            else:
+                return False
+        elif node.type == LESS_THAN:
+            if self.visit(node.left) < self.visit(node.right):
+                return True
+        else:
+                return False
+
 if __name__ == "__main__":
     text = input("calc>")
     lexer = Lexer(text)
-    pars = Parser(lexer).expr()
-    interpreter = Interpreter(pars).visit_BinOp(pars)
+    pars = Parser(lexer).cond_expr()
+    interpreter = Interpreter(pars).visit_CondOp(pars)
     print(interpreter)
