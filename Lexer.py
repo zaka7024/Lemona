@@ -1,4 +1,5 @@
 from token import Token
+from keys import *
 
 
 class Lexer:
@@ -7,7 +8,7 @@ class Lexer:
         self.text = text
         self.pos = 0
         self.current_token = None
-        self.current_char = self.text[self.pos]
+        self.current_char:str = self.text[self.pos]
 
     def error(self):
         raise Exception("Invalid Parse")
@@ -23,3 +24,42 @@ class Lexer:
         while self.current_char is not None and self.current_char.isspace():
             self.advance()
 
+    def number(self):
+        number = ""
+        while self.current_char is not None and self.current_char.isdigit():
+            number += self.current_char
+            self.advance()
+        return number
+
+    def get_next_token(self):
+
+        while self.current_char is not None:
+            if self.current_char.isspace():
+                self.skip_white_space()
+
+            if self.current_char.isdigit():
+                return Token(CONST_INTEGER, self.number())
+
+            if self.current_char == "+":
+                self.advance()
+                return Token(PLUS, "+")
+
+            if self.current_char == "-":
+                self.advance()
+                return Token(MINUS, "-")
+
+            if self.current_char == "*":
+                self.advance()
+                return Token(MULTIPLICATION, "*")
+
+            if self.current_char == "/":
+                self.advance()
+                return Token(DIVISION, "/")
+
+
+        return Token(EOF, EOF)
+if __name__ == "__main__":
+    lexer = Lexer("/ + ")
+    print(lexer.get_next_token())
+    print(lexer.get_next_token())
+    print(lexer.get_next_token())
