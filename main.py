@@ -17,7 +17,6 @@ class Lexer:
     def __init__(self, text):
         self.text = text
         self.pos = 0
-        self.current_token = None
         self.current_char:str = self.text[self.pos]
 
     def error(self):
@@ -34,6 +33,13 @@ class Lexer:
         while self.current_char is not None and self.current_char.isspace():
             self.advance()
 
+    def id(self):
+        name = ""
+        while self.current_char is not None and self.current_char.isalnum():
+            name += self.current_char
+            self.advance()
+        return name
+
     def number(self):
         number = ""
         while self.current_char is not None and self.current_char.isdigit():
@@ -49,6 +55,10 @@ class Lexer:
 
             if self.current_char.isdigit():
                 return Token(CONST_INTEGER, self.number())
+
+            if self.current_char.isalnum():
+                word = self.id()
+                return Token(word.upper(), word.upper())
 
             if self.current_char == "+":
                 self.advance()
@@ -146,13 +156,42 @@ class Parser:
             node = BinOp(token, node, self.term())
         return node
 
-    def cond_expr(self):
-
+    def factor_expr(self):
         left = self.expr()
         op = self.current_token
-        self.eat(op.type)
+        if op.type == MORE_THAN:
+            self.eat(MORE_THAN)
+        elif op.type == LESS_THAN:
+            self.eat(LESS_THAN)
         right = self.expr()
-        return CondOp(left, op, right)
+        return Cond(left, op, right)
+
+    def term_expr(self):
+        node = self.factor_expr()
+        while self.current_token.type in (AND, OR):
+            token = self.current_token
+            if token.type == AND:
+                self.eat(AND)
+            elif token.type == OR:
+                self.eat(OR)
+            node = CondOp(node, token, self.factor_expr())
+
+        return node
+
+    def cond_expr(self):
+
+        node = self.term_expr()
+
+        while self.current_token.type in (MORE_THAN, LESS_THAN):
+            token = self.current_token
+            if token.type == MORE_THAN:
+                self.eat(MORE_THAN)
+            elif token.type == LESS_THAN:
+                self.eat(LESS_THAN)
+
+            node = CondOp(node, token, self.term_expr())
+
+        return node
 
 
 class Interpreter(NodeVisitor):
@@ -177,16 +216,21 @@ class Interpreter(NodeVisitor):
     def visit_Num(self, token):
         return token.value
 
+    def visit_Cond(self, node):
+        op = node.op
+        if op.type == MORE_THAN:
+            return True if self.visit(node.left) > self.visit(node.right) else False
+
     def visit_CondOp(self, node):
-        if node.type == MORE_THAN:
-            if self.visit(node.left) > self.visit(node.right):
+        if node.op.type == AND:
+            if self.visit(node.left) and self.visit(node.right):
                 return True
             else:
                 return False
-        elif node.type == LESS_THAN:
-            if self.visit(node.left) < self.visit(node.right):
+        elif node.op.type == OR:
+            if self.visit(node.left) or self.visit(node.right):
                 return True
-        else:
+            else:
                 return False
 
 if __name__ == "__main__":
