@@ -61,6 +61,7 @@ class Lexer:
         while self.current_char is not None:
             if self.current_char.isspace():
                 self.skip_white_space()
+                continue
 
             if self.current_char == ".":
                 self.advance()
