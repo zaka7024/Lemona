@@ -26,6 +26,22 @@ class Selction:
         self.statements = statements
 
 
+class Repetition:
+
+    def __init__(self, _from, to, statements):
+        self._from = _from
+        self._to = to
+        self.statements = statements
+
+
+class Assignment:
+
+    def __init__(self, token, value):
+        self.token = token
+        self.id = self.token.value
+        self.value = value
+
+
 class BinOp:
 
     def __init__(self, op, left, right):

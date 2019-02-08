@@ -13,13 +13,14 @@ class Token:
 
 
 class Lexer:
-
     reserved_words = {
         "LET": Token(LET, LET),
         "AND": Token(AND, AND),
         "OR": Token(OR, OR),
         "IF": Token(IF, IF),
-        "END": Token(END, END)
+        "END": Token(END, END),
+        "FROM": Token(FROM, FROM),
+        "TO": Token(TO, TO)
     }
 
     def __init__(self, text):
@@ -60,6 +61,10 @@ class Lexer:
         while self.current_char is not None:
             if self.current_char.isspace():
                 self.skip_white_space()
+
+            if self.current_char == ".":
+                self.advance()
+                return Token(DOT, '.')
 
             if self.current_char.isdigit():
                 return Token(CONST_INTEGER, self.number())
@@ -143,6 +148,12 @@ class Parser:
             self.eat(CLOSE_PARENTHESES)
             return node
 
+        elif self.current_token.type == ID:  # i will remove this code as soon as
+            token = self.current_token
+            self.eat(ID)
+            node = Num(token)
+            return node
+
     def term(self):
 
         node = self.factor()
@@ -218,7 +229,7 @@ class Parser:
     def statements_list(self):
         statements_list = []
 
-        while self.current_token.type in (IF, LET):
+        while self.current_token.type in (IF, LET, FROM, ID):
             token = self.current_token
             if token.type == IF:
                 statements_list.append(self.selection_statement())
@@ -226,12 +237,19 @@ class Parser:
             if token.type == LET:
                 statements_list.append(self.declaration_statement())
 
+            if token.type == FROM:
+                statements_list.append(self.repetition_statement())
+
+            if token.type == ID:
+                statements_list.append(self.assignment_statement())
+
         return Program(statements_list)
 
     def declaration_statement(self):
-        self.eat(LET)
         vdl = VarDecList()
-        while self.current_token.type == ID:
+        self.eat(LET)
+        while self.current_token.type != DOT:
+
             name = self.current_token.value
             self.eat(ID)
             self.eat(ASSIGN)
@@ -240,7 +258,8 @@ class Parser:
             vdl.children.append(node)
             if self.current_token.type == COMMA:
                 self.eat(COMMA)
-                self.eat(LET)
+
+        self.eat(DOT)
         return vdl
 
     def selection_statement(self):
@@ -248,8 +267,27 @@ class Parser:
         cond = self.cond_expr()
         self.eat(COLON)
         statements_list = self.statements_list()
-
+        self.eat(END)
         return Selction(cond, statements_list)
+
+    def repetition_statement(self):
+        self.eat(FROM)
+        _from = self.current_token.value
+        self.eat(CONST_INTEGER)
+        self.eat(TO)
+        _to = self.current_token.value
+        self.eat(CONST_INTEGER)
+        self.eat(COLON)
+        statements_list = self.statements_list()
+        self.eat(END)
+        return Repetition(_from, _to, statements_list)
+
+    def assignment_statement(self):
+        token = self.current_token
+        self.eat(ID)
+        self.eat(ASSIGN)
+        value = self.expr()
+        return Assignment(token, value)
 
 
 class Interpreter(NodeVisitor):
@@ -268,6 +306,12 @@ class Interpreter(NodeVisitor):
         if self.visit(node.cond):
             self.visit(node.statements)
 
+    def visit_Repetition(self, node):
+        _from = node._from
+        _to = node._to
+        for _from in range(_to + 1):
+            self.visit(node.statements)
+
     def visit_BinOp(self, node):
         if node.type == PLUS:
             return self.visit(node.left) + self.visit(node.right)
@@ -281,8 +325,10 @@ class Interpreter(NodeVisitor):
         if node.type == DIVISION:
             return self.visit(node.left) / self.visit(node.right)
 
-    def visit_Num(self, token):
-        return token.value
+    def visit_Num(self, node):
+        if node.token.type == ID:
+            return self.GLOBAL_SCOPE[node.token.value]
+        return node.value
 
     def visit_Cond(self, node):
         op = node.op
@@ -308,6 +354,11 @@ class Interpreter(NodeVisitor):
     def visit_VarDec(self, node):
         self.GLOBAL_SCOPE[node.name] = node.value
 
+    def visit_Assignment(self, node):
+        if self.GLOBAL_SCOPE.__contains__(node.id):
+            self.GLOBAL_SCOPE[node.id] = self.visit(node.value)
+        else:
+            raise Exception(f"{node.id} is not defined")
 
 if __name__ == "__main__":
     text = open("code.txt", "r").read()
