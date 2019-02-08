@@ -13,6 +13,19 @@ class AST:
     pass
 
 
+class Program:
+
+    def __init__(self, statements_list):
+        self.statements = statements_list
+
+
+class Selction:
+
+    def __init__(self, cond, statements):
+        self.cond = cond
+        self.statements = statements
+
+
 class BinOp:
 
     def __init__(self, op, left, right):

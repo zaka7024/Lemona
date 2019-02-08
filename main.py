@@ -14,6 +14,14 @@ class Token:
 
 class Lexer:
 
+    reserved_words = {
+        "LET": Token(LET, LET),
+        "AND": Token(AND, AND),
+        "OR": Token(OR, OR),
+        "IF": Token(IF, IF),
+        "END": Token(END, END)
+    }
+
     def __init__(self, text):
         self.text = text
         self.pos = 0
@@ -38,7 +46,7 @@ class Lexer:
         while self.current_char is not None and self.current_char.isalnum():
             name += self.current_char
             self.advance()
-        return name
+        return self.reserved_words.get(name.upper(), Token(ID, name))
 
     def number(self):
         number = ""
@@ -57,8 +65,7 @@ class Lexer:
                 return Token(CONST_INTEGER, self.number())
 
             if self.current_char.isalnum():
-                word = self.id()
-                return Token(word.upper(), word.upper())
+                return self.id()
 
             if self.current_char == "+":
                 self.advance()
@@ -91,6 +98,18 @@ class Lexer:
             if self.current_char == "<":
                 self.advance()
                 return Token(LESS_THAN, '<')
+
+            if self.current_char == "=":
+                self.advance()
+                return Token(ASSIGN, '=')
+
+            if self.current_char == ",":
+                self.advance()
+                return Token(COMMA, ',')
+
+            if self.current_char == ":":
+                self.advance()
+                return Token(COLON, ':')
 
             self.error()
 
@@ -193,12 +212,61 @@ class Parser:
 
         return node
 
+    def program(self):
+        return self.statements_list()
+
+    def statements_list(self):
+        statements_list = []
+
+        while self.current_token.type in (IF, LET):
+            token = self.current_token
+            if token.type == IF:
+                statements_list.append(self.selection_statement())
+
+            if token.type == LET:
+                statements_list.append(self.declaration_statement())
+
+        return Program(statements_list)
+
+    def declaration_statement(self):
+        self.eat(LET)
+        vdl = VarDecList()
+        while self.current_token.type == ID:
+            name = self.current_token.value
+            self.eat(ID)
+            self.eat(ASSIGN)
+            node = VarDec(Var(name, self.current_token.value))
+            self.eat(CONST_INTEGER)
+            vdl.children.append(node)
+            if self.current_token.type == COMMA:
+                self.eat(COMMA)
+                self.eat(LET)
+        return vdl
+
+    def selection_statement(self):
+        self.eat(IF)
+        cond = self.cond_expr()
+        self.eat(COLON)
+        statements_list = self.statements_list()
+
+        return Selction(cond, statements_list)
+
 
 class Interpreter(NodeVisitor):
 
+    GLOBAL_SCOPE = dict()
+
     def __init__(self, tree):
         self.tree = tree
-        self.visit(tree)
+        self.visit_Program(tree)
+
+    def visit_Program(self, tree):
+        for node in tree.statements:
+            self.visit(node)
+
+    def visit_Selction(self, node):
+        if self.visit(node.cond):
+            self.visit(node.statements)
 
     def visit_BinOp(self, node):
         if node.type == PLUS:
@@ -233,9 +301,17 @@ class Interpreter(NodeVisitor):
             else:
                 return False
 
+    def visit_VarDecList(self, node):
+        for dec in node.children:
+            self.visit(dec)
+
+    def visit_VarDec(self, node):
+        self.GLOBAL_SCOPE[node.name] = node.value
+
+
 if __name__ == "__main__":
-    text = input("calc>")
+    text = open("code.txt", "r").read()
     lexer = Lexer(text)
-    pars = Parser(lexer).cond_expr()
-    interpreter = Interpreter(pars).visit_CondOp(pars)
-    print(interpreter)
+    pars = Parser(lexer).program()
+    interpreter = Interpreter(pars)
+    print(interpreter.GLOBAL_SCOPE)
