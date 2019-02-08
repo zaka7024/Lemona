@@ -13,4 +13,5 @@ AND = "AND"
 OR = "OR"
 ID = "ID"
 LET = "LET"
-
+ASSIGN = "="
+COMMA = "COMMA"

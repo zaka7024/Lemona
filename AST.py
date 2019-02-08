@@ -21,6 +21,7 @@ class BinOp:
         self.left = left
         self.right = right
 
+
 class Cond:
 
     def __init__(self, left, op, right):
@@ -35,6 +36,24 @@ class CondOp:
         self.op = op
         self.left = left
         self.right = right
+
+class VarDecList:
+
+    def __init__(self):
+        self.children = []
+
+class VarDec:
+
+    def __init__(self, node):
+        self.name = node.name
+        self.value = node.value
+
+
+class Var:
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
 
 
 class Num:
