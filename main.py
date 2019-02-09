@@ -49,12 +49,27 @@ class Lexer:
             self.advance()
         return self.reserved_words.get(name.upper(), Token(ID, name))
 
+    def peek(self):
+        if self.pos < len(self.text) - 2:
+            return self.text[self.pos + 1]
+
     def number(self):
         number = ""
         while self.current_char is not None and self.current_char.isdigit():
             number += self.current_char
             self.advance()
-        return int(number)
+
+        if self.current_char == "." and self.peek() is not None and self.peek().isdigit():
+            number += self.current_char
+            self.advance()
+
+            while self.current_char is not None and self.current_char.isdigit():
+                number += self.current_char
+                self.advance()
+
+            return Token(CONST_FLOAT, float(number))
+
+        return Token(CONST_INTEGER, int(number))
 
     def string(self):
         text = ""
@@ -71,15 +86,15 @@ class Lexer:
                 self.skip_white_space()
                 continue
 
-            if self.current_char == ".":
-                self.advance()
-                return Token(DOT, '.')
-
             if self.current_char.isdigit():
-                return Token(CONST_INTEGER, self.number())
+                return self.number()
 
             if self.current_char.isalnum():
                 return self.id()
+
+            if self.current_char == ".":
+                self.advance()
+                return Token(DOT, '.')
 
             if self.current_char == '"':
                 self.advance()
@@ -272,6 +287,10 @@ class Parser:
 
             if self.current_token.type == CONST_INTEGER:
                 self.eat(CONST_INTEGER)
+
+            elif self.current_token.type == CONST_FLOAT:
+                self.eat(CONST_FLOAT)
+
             elif self.current_token.type == STRING:
                 self.eat(STRING)
 
