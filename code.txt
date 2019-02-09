@@ -1,0 +1,7 @@
+let x = 10.
+let y = 105.666.
+let name = "zaka7024".
+
+IF 2 == 2:
+    x = 0
+END

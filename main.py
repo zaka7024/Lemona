@@ -126,9 +126,24 @@ class Lexer:
                 self.advance()
                 return Token(CLOSE_PARENTHESES, ')')
 
+            if self.current_char == "=" and self.peek() == "=":
+                self.advance()
+                self.advance()
+                return Token(EQUAL, '==')
+
+            if self.current_char == ">" and self.peek() == "=":
+                self.advance()
+                self.advance()
+                return Token(MORE_THAN_OR_EQUAL, '>=')
+
             if self.current_char == ">":
                 self.advance()
                 return Token(MORE_THAN, '>')
+
+            if self.current_char == "<" and self.peek() == "=":
+                self.advance()
+                self.advance()
+                return Token(LESS_THAN_OR_EQUAL, '>=')
 
             if self.current_char == "<":
                 self.advance()
@@ -219,10 +234,22 @@ class Parser:
     def factor_expr(self):
         left = self.expr()
         op = self.current_token
+
+        if op.type == EQUAL:
+            self.eat(EQUAL)
+
         if op.type == MORE_THAN:
             self.eat(MORE_THAN)
+
         elif op.type == LESS_THAN:
             self.eat(LESS_THAN)
+
+        elif op.type == LESS_THAN_OR_EQUAL:
+            self.eat(LESS_THAN_OR_EQUAL)
+
+        elif op.type == MORE_THAN_OR_EQUAL:
+            self.eat(MORE_THAN_OR_EQUAL)
+
         right = self.expr()
         return Cond(left, op, right)
 
@@ -242,12 +269,19 @@ class Parser:
 
         node = self.term_expr()
 
-        while self.current_token.type in (MORE_THAN, LESS_THAN):
+        while self.current_token.type in (MORE_THAN, LESS_THAN, LESS_THAN_OR_EQUAL, MORE_THAN_OR_EQUAL, EQUAL):
             token = self.current_token
             if token.type == MORE_THAN:
                 self.eat(MORE_THAN)
+
             elif token.type == LESS_THAN:
                 self.eat(LESS_THAN)
+
+            elif token.type == LESS_THAN_OR_EQUAL:
+                self.eat(LESS_THAN_OR_EQUAL)
+
+            elif token.type == MORE_THAN_OR_EQUAL:
+                self.eat(MORE_THAN_OR_EQUAL)
 
             node = CondOp(node, token, self.term_expr())
 
@@ -371,8 +405,21 @@ class Interpreter(NodeVisitor):
 
     def visit_Cond(self, node):
         op = node.op
+
+        if op.type == EQUAL:
+            return True if self.visit(node.left) == self.visit(node.right) else False
+
         if op.type == MORE_THAN:
             return True if self.visit(node.left) > self.visit(node.right) else False
+
+        elif op.type == LESS_THAN:
+            return True if self.visit(node.left) < self.visit(node.right) else False
+
+        elif op.type == MORE_THAN_OR_EQUAL:
+            return True if self.visit(node.left) >= self.visit(node.right) else False
+
+        elif op.type == LESS_THAN_OR_EQUAL:
+            return True if self.visit(node.left) <= self.visit(node.right) else False
 
     def visit_CondOp(self, node):
         if node.op.type == AND:
