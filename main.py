@@ -56,6 +56,14 @@ class Lexer:
             self.advance()
         return int(number)
 
+    def string(self):
+        text = ""
+
+        while self.current_char is not None and self.current_char != '"':
+            text += self.current_char
+            self.advance()
+        return text
+
     def get_next_token(self):
 
         while self.current_char is not None:
@@ -72,6 +80,12 @@ class Lexer:
 
             if self.current_char.isalnum():
                 return self.id()
+
+            if self.current_char == '"':
+                self.advance()
+                text = self.string()
+                self.advance()
+                return Token(STRING, text)
 
             if self.current_char == "+":
                 self.advance()
@@ -255,7 +269,12 @@ class Parser:
             self.eat(ID)
             self.eat(ASSIGN)
             node = VarDec(Var(name, self.current_token.value))
-            self.eat(CONST_INTEGER)
+
+            if self.current_token.type == CONST_INTEGER:
+                self.eat(CONST_INTEGER)
+            elif self.current_token.type == STRING:
+                self.eat(STRING)
+
             vdl.children.append(node)
             if self.current_token.type == COMMA:
                 self.eat(COMMA)
