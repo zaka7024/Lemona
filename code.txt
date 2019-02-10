@@ -1,5 +1,1 @@
-let x = 10.
-
-if x is 10:
-    x = 10 DIV 10
-end
+let l = [10, 20].

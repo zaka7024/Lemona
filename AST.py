@@ -86,6 +86,20 @@ class Var:
         self.value = value
 
 
+class ListDec:
+
+    def __init__(self, node):
+        self.name = node.name
+        self.value = node.value
+
+
+class List:
+
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+
 class Num:
 
     def __init__(self, node):

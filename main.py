@@ -15,7 +15,6 @@ class Token:
 class Lexer:
     reserved_words = {
         "LET": Token(LET, LET),
-        "LIST": Token(LIST, LIST),
         "DIV": Token(DIV, DIV),
         "AND": Token(AND, AND),
         "OR": Token(OR, OR),
@@ -174,6 +173,14 @@ class Lexer:
             elif self.current_char == ":":
                 self.advance()
                 return Token(COLON, ':')
+
+            elif self.current_char == "[":
+                self.advance()
+                return Token(OPEN_INDEX, '[')
+
+            elif self.current_char == "]":
+                self.advance()
+                return Token(CLOSE_INDEX, ']')
 
             self.error()
 
@@ -340,10 +347,30 @@ class Parser:
         self.eat(LET)
         while self.current_token.type != DOT:
 
-            name = self.current_token.value
+            token = self.current_token
+            name = token.value
             self.eat(ID)
             self.eat(ASSIGN)
-            node = VarDec(Var(name, self.current_token.value))
+
+            if self.current_token.type == OPEN_INDEX:
+                self.eat(OPEN_INDEX)
+                value = [self.current_token.value]
+
+                self.eat(CONST_INTEGER)
+
+                while self.current_token.type == COMMA:
+                    self.eat(COMMA)
+
+                    value.append(self.current_token.value)
+
+                    self.eat(CONST_INTEGER)
+
+            # check if the declaration is for variable declaration or list declaration
+            if self.current_token.type == CLOSE_INDEX:
+                node = ListDec(List(name, value))
+                self.eat(CLOSE_INDEX)
+            else:
+                node = VarDec(Var(name, self.current_token.value))
 
             if self.current_token.type == CONST_INTEGER:
                 self.eat(CONST_INTEGER)
@@ -479,6 +506,9 @@ class Interpreter(NodeVisitor):
             self.visit(dec)
 
     def visit_VarDec(self, node):
+        self.GLOBAL_SCOPE[node.name] = node.value
+
+    def visit_ListDec(self, node):
         self.GLOBAL_SCOPE[node.name] = node.value
 
     def visit_Assignment(self, node):
