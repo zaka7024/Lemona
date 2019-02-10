@@ -21,9 +21,10 @@ class Program:
 
 class Selction:
 
-    def __init__(self, cond, statements):
+    def __init__(self, cond, true_statements, false_statements=None):
         self.cond = cond
-        self.statements = statements
+        self.true_statements = true_statements
+        self.false_statements = false_statements
 
 
 class Repetition:
