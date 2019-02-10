@@ -15,6 +15,7 @@ class Token:
 class Lexer:
     reserved_words = {
         "LET": Token(LET, LET),
+        "LIST": Token(LIST, LIST),
         "DIV": Token(DIV, DIV),
         "AND": Token(AND, AND),
         "OR": Token(OR, OR),
@@ -44,6 +45,12 @@ class Lexer:
     def skip_white_space(self):
         while self.current_char is not None and self.current_char.isspace():
             self.advance()
+
+    def skip_comments(self):
+        self.advance()
+        while self.current_char is not None and self.current_char != "#":
+            self.advance()
+        self.advance()
 
     def id(self):
         name = ""
@@ -95,72 +102,76 @@ class Lexer:
             if self.current_char.isalnum():
                 return self.id()
 
-            if self.current_char == ".":
+            elif self.current_char == "#":
+                self.skip_comments()
+                continue
+
+            elif self.current_char == ".":
                 self.advance()
                 return Token(DOT, '.')
 
-            if self.current_char == '"':
+            elif self.current_char == '"':
                 self.advance()
                 text = self.string()
                 self.advance()
                 return Token(STRING, text)
 
-            if self.current_char == "+":
+            elif self.current_char == "+":
                 self.advance()
                 return Token(PLUS, "+")
 
-            if self.current_char == "-":
+            elif self.current_char == "-":
                 self.advance()
                 return Token(MINUS, "-")
 
-            if self.current_char == "*":
+            elif self.current_char == "*":
                 self.advance()
                 return Token(MULTIPLICATION, "*")
 
-            if self.current_char == "/":
+            elif self.current_char == "/":
                 self.advance()
                 return Token(DIVISION, "/")
 
-            if self.current_char == "(":
+            elif self.current_char == "(":
                 self.advance()
                 return Token(OPEN_PARENTHESES, '(')
 
-            if self.current_char == ")":
+            elif self.current_char == ")":
                 self.advance()
                 return Token(CLOSE_PARENTHESES, ')')
 
-            if self.current_char == "=" and self.peek() == "=":
+            elif self.current_char == "=" and self.peek() == "=":
                 self.advance()
                 self.advance()
                 return Token(EQUAL, '==')
 
-            if self.current_char == ">" and self.peek() == "=":
+            elif self.current_char == ">" and self.peek() == "=":
                 self.advance()
                 self.advance()
                 return Token(MORE_THAN_OR_EQUAL, '>=')
 
-            if self.current_char == ">":
+            elif self.current_char == ">":
                 self.advance()
                 return Token(MORE_THAN, '>')
 
-            if self.current_char == "<" and self.peek() == "=":
+            elif self.current_char == "<" and self.peek() == "=":
                 self.advance()
                 self.advance()
                 return Token(LESS_THAN_OR_EQUAL, '>=')
 
-            if self.current_char == "<":
+            elif self.current_char == "<":
                 self.advance()
                 return Token(LESS_THAN, '<')
 
-            if self.current_char == "=":
+            elif self.current_char == "=":
                 self.advance()
                 return Token(ASSIGN, '=')
 
-            if self.current_char == ",":
+            elif self.current_char == ",":
                 self.advance()
                 return Token(COMMA, ',')
 
-            if self.current_char == ":":
+            elif self.current_char == ":":
                 self.advance()
                 return Token(COLON, ':')
 
