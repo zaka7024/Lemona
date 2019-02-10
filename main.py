@@ -18,6 +18,7 @@ class Lexer:
         "AND": Token(AND, AND),
         "OR": Token(OR, OR),
         "IF": Token(IF, IF),
+        "ELSE": Token(ELSE, ELSE),
         "END": Token(END, END),
         "FROM": Token(FROM, FROM),
         "TO": Token(TO, TO)
@@ -339,9 +340,16 @@ class Parser:
         self.eat(IF)
         cond = self.cond_expr()
         self.eat(COLON)
-        statements_list = self.statements_list()
+        statements_list_true = self.statements_list()
+
+        statements_list_false = None
+
+        if self.current_token.type == ELSE:
+            self.eat(ELSE)
+            statements_list_false = self.statements_list()
+
         self.eat(END)
-        return Selction(cond, statements_list)
+        return Selction(cond, statements_list_true, statements_list_false)
 
     def repetition_statement(self):
         self.eat(FROM)
@@ -377,7 +385,9 @@ class Interpreter(NodeVisitor):
 
     def visit_Selction(self, node):
         if self.visit(node.cond):
-            self.visit(node.statements)
+            self.visit(node.true_statements)
+        elif node.false_statements is not None:
+            self.visit(node.false_statements)
 
     def visit_Repetition(self, node):
         _from = node._from
