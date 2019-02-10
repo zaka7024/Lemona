@@ -15,6 +15,7 @@ class Token:
 class Lexer:
     reserved_words = {
         "LET": Token(LET, LET),
+        "DIV": Token(DIV, DIV),
         "AND": Token(AND, AND),
         "OR": Token(OR, OR),
         "IS": Token(IS, IS),
@@ -205,7 +206,7 @@ class Parser:
 
         node = self.factor()
 
-        while self.current_token.type in (MULTIPLICATION, DIVISION):
+        while self.current_token.type in (MULTIPLICATION, DIVISION, DIV):
 
             token = self.current_token
             if token.type is MULTIPLICATION:
@@ -213,6 +214,9 @@ class Parser:
 
             if token.type is DIVISION:
                 self.eat(DIVISION)
+
+            if token.type is DIV:
+                self.eat(DIV)
 
             node = BinOp(token, node, self.factor())
 
@@ -417,6 +421,9 @@ class Interpreter(NodeVisitor):
 
         if node.type == DIVISION:
             return self.visit(node.left) / self.visit(node.right)
+
+        if node.type == DIV:
+            return self.visit(node.left) // self.visit(node.right)
 
     def visit_Num(self, node):
         if node.token.type == ID:
