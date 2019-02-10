@@ -17,6 +17,7 @@ class Lexer:
         "LET": Token(LET, LET),
         "AND": Token(AND, AND),
         "OR": Token(OR, OR),
+        "IS": Token(IS, IS),
         "IF": Token(IF, IF),
         "ELSE": Token(ELSE, ELSE),
         "END": Token(END, END),
@@ -251,6 +252,9 @@ class Parser:
         elif op.type == MORE_THAN_OR_EQUAL:
             self.eat(MORE_THAN_OR_EQUAL)
 
+        elif op.type == IS:
+            self.eat(IS)
+
         right = self.expr()
         return Cond(left, op, right)
 
@@ -270,7 +274,7 @@ class Parser:
 
         node = self.term_expr()
 
-        while self.current_token.type in (MORE_THAN, LESS_THAN, LESS_THAN_OR_EQUAL, MORE_THAN_OR_EQUAL, EQUAL):
+        while self.current_token.type in (MORE_THAN, LESS_THAN, LESS_THAN_OR_EQUAL, MORE_THAN_OR_EQUAL, EQUAL, IS):
             token = self.current_token
             if token.type == MORE_THAN:
                 self.eat(MORE_THAN)
@@ -283,6 +287,12 @@ class Parser:
 
             elif token.type == MORE_THAN_OR_EQUAL:
                 self.eat(MORE_THAN_OR_EQUAL)
+
+            elif token.type == EQUAL:
+                self.eat(EQUAL)
+
+            elif token.type == IS:
+                self.eat(EQUAL)
 
             node = CondOp(node, token, self.term_expr())
 
@@ -419,7 +429,10 @@ class Interpreter(NodeVisitor):
         if op.type == EQUAL:
             return True if self.visit(node.left) == self.visit(node.right) else False
 
-        if op.type == MORE_THAN:
+        elif op.type == IS:
+            return True if self.visit(node.left) is self.visit(node.right) else False
+
+        elif op.type == MORE_THAN:
             return True if self.visit(node.left) > self.visit(node.right) else False
 
         elif op.type == LESS_THAN:
