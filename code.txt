@@ -1,5 +1,6 @@
-let x = 0.
+let x = 5.
 
-from 1 to 10 step 2:
-    x = x + 1
+from 1 to 5 step 1:
+    continue
+    x = 0
 end

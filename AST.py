@@ -36,6 +36,14 @@ class Repetition:
         self.statements = statements
 
 
+class Stop:
+    pass
+
+
+class Continue:
+    pass
+
+
 class Assignment:
 
     def __init__(self, token, value):

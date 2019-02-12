@@ -24,7 +24,9 @@ class Lexer:
         "END": Token(END, END),
         "FROM": Token(FROM, FROM),
         "TO": Token(TO, TO),
-        "STEP": Token(STEP, STEP)
+        "STEP": Token(STEP, STEP),
+        "STOP": Token(STOP, STOP),
+        "CONTINUE": Token(CONTINUE, CONTINUE)
     }
 
     def __init__(self, text):
@@ -327,7 +329,7 @@ class Parser:
     def statements_list(self):
         statements_list = []
 
-        while self.current_token.type in (IF, LET, FROM, ID):
+        while self.current_token.type in (IF, LET, FROM, ID, CONTINUE):
             token = self.current_token
             if token.type == IF:
                 statements_list.append(self.selection_statement())
@@ -337,6 +339,9 @@ class Parser:
 
             if token.type == FROM:
                 statements_list.append(self.repetition_statement())
+
+            if token.type == CONTINUE:
+                statements_list.append(self.continue_statement())
 
             if token.type == ID:
                 statements_list.append(self.assignment_statement())
@@ -432,6 +437,10 @@ class Parser:
         value = self.expr()
         return Assignment(token, value)
 
+    def continue_statement(self):
+        self.eat(CONTINUE)
+        return Stop()
+
 
 class Interpreter(NodeVisitor):
 
@@ -443,6 +452,8 @@ class Interpreter(NodeVisitor):
 
     def visit_Program(self, tree):
         for node in tree.statements:
+            if type(node) == Stop:
+                break
             self.visit(node)
 
     def visit_Selction(self, node):
@@ -456,9 +467,12 @@ class Interpreter(NodeVisitor):
         _from = node._from
         _to = node._to
         _step = node.step
-        print(_step)
+
         for i in range(_from, _to, _step):
             self.visit(node.statements)
+
+    def visit_Continue(self, node):
+        pass
 
     def visit_BinOp(self, node):
         if node.type == PLUS:
