@@ -371,7 +371,7 @@ class Parser:
                 node = ListDec(List(name, value))
                 self.eat(CLOSE_INDEX)
             else:
-                node = VarDec(Var(name, self.current_token.value))
+                node = VarDec(Var(name, self.expr()))
 
             if self.current_token.type == CONST_INTEGER:
                 self.eat(CONST_INTEGER)
@@ -519,7 +519,7 @@ class Interpreter(NodeVisitor):
             self.visit(dec)
 
     def visit_VarDec(self, node):
-        self.GLOBAL_SCOPE[node.name] = node.value
+        self.GLOBAL_SCOPE[node.name] = self.visit(node.value)
 
     def visit_ListDec(self, node):
         self.GLOBAL_SCOPE[node.name] = node.value
