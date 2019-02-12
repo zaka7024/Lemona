@@ -23,7 +23,8 @@ class Lexer:
         "ELSE": Token(ELSE, ELSE),
         "END": Token(END, END),
         "FROM": Token(FROM, FROM),
-        "TO": Token(TO, TO)
+        "TO": Token(TO, TO),
+        "STEP": Token(STEP, STEP)
     }
 
     def __init__(self, text):
@@ -410,10 +411,19 @@ class Parser:
         self.eat(TO)
         _to = self.current_token.value
         self.eat(CONST_INTEGER)
+
+        _step = 1
+
+        if self.current_token.type == STEP:
+            self.eat(STEP)
+            _step = self.current_token.value
+            self.eat(CONST_INTEGER)
+
         self.eat(COLON)
+
         statements_list = self.statements_list()
         self.eat(END)
-        return Repetition(_from, _to, statements_list)
+        return Repetition(_from, _to, statements_list, _step)
 
     def assignment_statement(self):
         token = self.current_token
@@ -442,9 +452,12 @@ class Interpreter(NodeVisitor):
             self.visit(node.false_statements)
 
     def visit_Repetition(self, node):
+
         _from = node._from
         _to = node._to
-        for _from in range(_to + 1):
+        _step = node.step
+        print(_step)
+        for i in range(_from, _to, _step):
             self.visit(node.statements)
 
     def visit_BinOp(self, node):

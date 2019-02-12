@@ -29,9 +29,10 @@ class Selction:
 
 class Repetition:
 
-    def __init__(self, _from, to, statements):
+    def __init__(self, _from, to, statements, step=1):
         self._from = _from
         self._to = to
+        self.step = step
         self.statements = statements
 
 
