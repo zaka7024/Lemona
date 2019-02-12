@@ -28,3 +28,17 @@ FROM 1 TO 5:
   DO SOME THING HERE
 END
 ```
+```
+LET X = 0.
+FROM 1 TO 10 STEP 2:
+  X = X + 1
+END
+```
+
+```
+LET X = 10.
+FROM 1 TO 5:
+  CONTINUE
+  X = 0
+END
+```

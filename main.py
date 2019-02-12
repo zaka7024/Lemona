@@ -411,9 +411,17 @@ class Parser:
 
     def repetition_statement(self):
         self.eat(FROM)
-        _from = self.current_token.value
-        self.eat(CONST_INTEGER)
+        _from = 0
+
+        if self.current_token.type == CONST_INTEGER:
+            _from = Num(self.current_token)
+            self.eat(CONST_INTEGER)
+        elif self.current_token.type == ID:
+            _from = Var(self.current_token.type, self.current_token.value)
+            self.eat(ID)
+
         self.eat(TO)
+
         _to = self.current_token.value
         self.eat(CONST_INTEGER)
 
@@ -464,7 +472,7 @@ class Interpreter(NodeVisitor):
 
     def visit_Repetition(self, node):
 
-        _from = node._from
+        _from = self.visit(node._from)
         _to = node._to
         _step = node.step
 
@@ -543,6 +551,10 @@ class Interpreter(NodeVisitor):
             self.GLOBAL_SCOPE[node.id] = self.visit(node.value)
         else:
             raise Exception(f"{node.id} is not defined")
+
+    def visit_Var(self, node):
+        return self.GLOBAL_SCOPE[node.value]
+
 
 if __name__ == "__main__":
     text = open("code.txt", "r").read()
