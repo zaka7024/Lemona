@@ -211,6 +211,11 @@ class Parser:
             self.eat(CONST_INTEGER)
             return Num(token)
 
+        elif self.current_token.type == CONST_FLOAT:
+            token = self.current_token
+            self.eat(CONST_INTEGER)
+            return Num(token)
+
         elif self.current_token.type == OPEN_PARENTHESES:
             self.eat(OPEN_PARENTHESES)
             node = self.expr()
@@ -317,11 +322,26 @@ class Parser:
                 self.eat(EQUAL)
 
             elif token.type == IS:
-                self.eat(EQUAL)
+                self.eat(IS)
 
             node = CondOp(node, token, self.term_expr())
 
         return node
+
+    def factor_concatenation(self):
+        token = self.current_token
+        self.eat(STRING)
+        return token.value
+
+    def concatenation(self):
+        value = self.factor_concatenation()
+        while self.current_token.type in PLUS:
+            token = self.current_token
+            if token.type == PLUS:
+                self.eat(PLUS)
+                value += self.factor_concatenation()
+
+        return Str(value)
 
     def program(self):
         return self.statements_list()
@@ -351,48 +371,50 @@ class Parser:
     def declaration_statement(self):
         vdl = VarDecList()
         self.eat(LET)
-        while self.current_token.type != DOT:
 
-            token = self.current_token
-            name = token.value
-            self.eat(ID)
-            self.eat(ASSIGN)
+        vdl.children.append(self.var_declaration())
 
-            if self.current_token.type == OPEN_INDEX:
-                self.eat(OPEN_INDEX)
-                value = [self.current_token.value]
+        while self.current_token.type == COMMA:
 
-                self.eat(CONST_INTEGER)
-
-                while self.current_token.type == COMMA:
-                    self.eat(COMMA)
-
-                    value.append(self.current_token.value)
-
-                    self.eat(CONST_INTEGER)
-
-            # check if the declaration is for variable declaration or list declaration
-            if self.current_token.type == CLOSE_INDEX:
-                node = ListDec(List(name, value))
-                self.eat(CLOSE_INDEX)
-            else:
-                node = VarDec(Var(name, self.expr()))
-
-            if self.current_token.type == CONST_INTEGER:
-                self.eat(CONST_INTEGER)
-
-            elif self.current_token.type == CONST_FLOAT:
-                self.eat(CONST_FLOAT)
-
-            elif self.current_token.type == STRING:
-                self.eat(STRING)
-
-            vdl.children.append(node)
-            if self.current_token.type == COMMA:
-                self.eat(COMMA)
+            self.eat(COMMA)
+            vdl.children.append(self.var_declaration())
 
         self.eat(DOT)
         return vdl
+
+    def var_declaration(self):
+        id_token = self.current_token
+        self.eat(ID)
+        self.eat(ASSIGN)
+        node = None
+
+        if self.current_token.type == CONST_INTEGER:
+            node = VarDec(Var(id_token.value, self.expr()))
+
+        elif self.current_token.type == CONST_FLOAT:
+            node = VarDec(Var(id_token.value, self.expr()))
+
+        elif self.current_token.type == STRING:
+            node = VarDec(Var(id_token.value, self.concatenation()))
+
+        elif self.current_token.type == OPEN_INDEX:
+            node = self.list_declaration(id_token.value)
+
+        return node
+
+    def list_declaration(self, name):
+        self.eat(OPEN_INDEX)
+        items = []
+        while self.current_token.type != CLOSE_INDEX:
+            token = self.current_token
+            if token.type in (CONST_FLOAT, CONST_INTEGER, STRING):
+                items.append(token.value)
+                self.eat(token.type)
+            if self.current_token.type == COMMA:
+                self.eat(COMMA)
+
+        self.eat(CLOSE_INDEX)
+        return ListDec(List(name, items))
 
     def selection_statement(self):
         self.eat(IF)
@@ -439,11 +461,18 @@ class Parser:
         return Repetition(_from, _to, statements_list, _step)
 
     def assignment_statement(self):
-        token = self.current_token
+        id_token = self.current_token
         self.eat(ID)
         self.eat(ASSIGN)
-        value = self.expr()
-        return Assignment(token, value)
+
+        if self.current_token.type in (CONST_INTEGER, CONST_FLOAT, STRING):
+            token = self.current_token
+            if token.type == CONST_FLOAT or  token.type == CONST_INTEGER:
+                value = self.expr()
+            elif token.type is STRING:
+                value = self.concatenation()
+
+        return Assignment(id, id_token)
 
     def continue_statement(self):
         self.eat(CONTINUE)
@@ -503,6 +532,9 @@ class Interpreter(NodeVisitor):
             return self.GLOBAL_SCOPE[node.token.value]
         return node.value
 
+    def visit_Str(self, node):
+        return node.value
+
     def visit_Cond(self, node):
         op = node.op
 
@@ -549,8 +581,6 @@ class Interpreter(NodeVisitor):
     def visit_Assignment(self, node):
         if self.GLOBAL_SCOPE.__contains__(node.id):
             self.GLOBAL_SCOPE[node.id] = self.visit(node.value)
-        else:
-            raise Exception(f"{node.id} is not defined")
 
     def visit_Var(self, node):
         return self.GLOBAL_SCOPE[node.value]

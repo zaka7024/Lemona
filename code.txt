@@ -1,5 +1,1 @@
-let x = 0.
-
-from x to 5 step 1:
-    x = x + 1
-end
+let x = [10, 20, 30, 50, "asd"].
