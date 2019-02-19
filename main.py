@@ -264,7 +264,19 @@ class Parser:
         return node
 
     def factor_expr(self):
-        left = self.expr()
+        token = self.current_token
+        left = None
+        if token.type in (CONST_INTEGER, CONST_FLOAT):
+            left = self.expr()
+
+        elif self.current_token.type in STRING:
+            left = self.concatenation()
+
+        # elif self.current_token.type == ID:
+        #     left = Var(token,)
+        #     self.eat(ID)  # the problem here because i can not get the var value in the parser
+        # i need to solve this problem
+
         op = self.current_token
 
         if op.type == EQUAL:
@@ -285,7 +297,18 @@ class Parser:
         elif op.type == IS:
             self.eat(IS)
 
-        right = self.expr()
+        token = self.current_token
+        right = None
+        if token.type in (CONST_INTEGER, CONST_FLOAT):
+            right = self.expr()
+
+        elif self.current_token.type in STRING:
+            right = self.concatenation()
+
+        elif self.current_token.type == ID:
+            right = Var(token)
+            self.eat(ID)
+
         return Cond(left, op, right)
 
     def term_expr(self):
@@ -330,7 +353,13 @@ class Parser:
 
     def factor_concatenation(self):
         token = self.current_token
-        self.eat(STRING)
+
+        if token.type == STRING:
+            self.eat(STRING)
+
+        elif token.type == ID:
+            self.eat(ID)
+
         return token.value
 
     def concatenation(self):
@@ -465,14 +494,15 @@ class Parser:
         self.eat(ID)
         self.eat(ASSIGN)
 
-        if self.current_token.type in (CONST_INTEGER, CONST_FLOAT, STRING):
+        value = None
+        if self.current_token.type in (CONST_INTEGER, CONST_FLOAT, STRING, ID):
             token = self.current_token
-            if token.type == CONST_FLOAT or  token.type == CONST_INTEGER:
+            if token.type == CONST_FLOAT or token.type == CONST_INTEGER or token.type == ID:
                 value = self.expr()
             elif token.type is STRING:
                 value = self.concatenation()
 
-        return Assignment(id, id_token)
+        return Assignment(id_token, value)
 
     def continue_statement(self):
         self.eat(CONTINUE)
@@ -533,7 +563,7 @@ class Interpreter(NodeVisitor):
         return node.value
 
     def visit_Str(self, node):
-        return node.value
+        return str(node.value)
 
     def visit_Cond(self, node):
         op = node.op
@@ -542,7 +572,7 @@ class Interpreter(NodeVisitor):
             return True if self.visit(node.left) == self.visit(node.right) else False
 
         elif op.type == IS:
-            return True if self.visit(node.left) is self.visit(node.right) else False
+            return True if self.visit(node.left) == self.visit(node.right) else False
 
         elif op.type == MORE_THAN:
             return True if self.visit(node.left) > self.visit(node.right) else False

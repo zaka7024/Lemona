@@ -108,6 +108,10 @@ class List:
         self.name = name
         self.value = value
 
+class Str:
+
+    def __init__(self, string):
+        self.value = string
 
 class Num:
 
