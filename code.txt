@@ -1,4 +1,2 @@
-LET A = 10, B = 20.
-A = A + B
-B = A - B
-A = A - B
+let x = 10, y = 20.
+

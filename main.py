@@ -1,6 +1,6 @@
 from keys import *
 from AST import *
-
+from symbols import *
 
 class Token:
 
@@ -305,9 +305,9 @@ class Parser:
         elif self.current_token.type in STRING:
             right = self.concatenation()
 
-        elif self.current_token.type == ID:
-            right = Var(token)
-            self.eat(ID)
+        # elif self.current_token.type == ID:
+        #     right = Var(token)
+        #     self.eat(ID)
 
         return Cond(left, op, right)
 
@@ -616,9 +616,91 @@ class Interpreter(NodeVisitor):
         return self.GLOBAL_SCOPE[node.value]
 
 
+#     Symbol Table Builder
+
+class SymbolTableBuilder(NodeVisitor):
+
+    def __init__(self):
+        self.symbolTable = SymbolTable()
+
+    def visit_Program(self, tree):
+        for node in tree.statements:
+            if type(node) == Stop:
+                break
+            self.visit(node)
+
+    def visit_Selction(self, node):
+        self.visit(node.cond)
+        self.visit(node.true_statements)
+        self.visit(node.false_statements)
+
+
+    def visit_Repetition(self, node):
+
+        _from = self.visit(node._from)
+        _to = node._to
+        _step = node.step
+        self.visit(node.statements)
+
+    def visit_Continue(self, node):
+        pass
+
+    def visit_BinOp(self, node):
+        self.visit(node.left)
+        self.visit(node.right)
+
+    def visit_Num(self, node):
+        var_name = node.token.value
+        if type(var_name) is str:
+            if self.symbolTable.lockup(var_name) is None:
+                raise NameError(f"Undefined {var_name}")
+
+    def visit_Str(self, node):
+        return str(node.value)
+
+    def visit_Cond(self, node):
+        self.visit(node.left)
+        self.visit(node.right)
+
+    def visit_CondOp(self, node):
+        self.visit(node.left)
+        self.visit(node.right)
+
+    def visit_VarDecList(self, node):
+        for dec in node.children:
+            self.visit(dec)
+
+    def visit_VarDec(self, node):
+        symbol_name = node.name
+
+        self.symbolTable.define(VarSymbol(symbol_name, "VARIABLE"))
+
+    def visit_ListDec(self, node):
+        symbol_name = node.name
+
+        self.symbolTable.define(VarSymbol(symbol_name, "LIST"))
+
+    def visit_Assignment(self, node):
+
+        symbol_name = node.id
+
+        if self.symbolTable.lockup(symbol_name) is None:
+            raise NameError(f"Undefined {str(node.id)}")
+
+        self.visit(node.value)  # left of =
+
+    def visit_Var(self, node):
+        var_name = node.name
+        if self.symbolTable.lockup(var_name) is None:
+            raise NameError(var_name)
+
+
+
 if __name__ == "__main__":
     text = open("code.txt", "r").read()
     lexer = Lexer(text)
     pars = Parser(lexer).program()
+    symbol_table_builder = SymbolTableBuilder()
+    symbol_table_builder.visit(pars)
     interpreter = Interpreter(pars)
     print(interpreter.GLOBAL_SCOPE)
