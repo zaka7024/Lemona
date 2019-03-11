@@ -222,6 +222,14 @@ class Parser:
             self.eat(CLOSE_PARENTHESES)
             return node
 
+        elif self.current_token.type == ID and self.lexer.current_char == "[":
+            token = self.current_token
+            self.eat(ID)
+            self.eat(OPEN_INDEX)
+            index = self.expr()
+            self.eat(CLOSE_INDEX)
+            return ListVar(token, index)
+
         elif self.current_token.type == ID:  # i will remove this code as soon as
             token = self.current_token
             self.eat(ID)
@@ -272,10 +280,17 @@ class Parser:
         elif self.current_token.type in STRING:
             left = self.concatenation()
 
-        # elif self.current_token.type == ID:
-        #     left = Var(token,)
-        #     self.eat(ID)  # the problem here because i can not get the var value in the parser
-        # i need to solve this problem
+        elif self.current_token.type == ID and self.lexer.current_char == "[":
+            token = self.current_token
+            self.eat(ID)
+            self.eat(OPEN_INDEX)
+            index = self.expr()
+            self.eat(CLOSE_INDEX)
+            left = ListVar(token, index)
+
+        elif self.current_token.type == ID:
+            left = Var(token.value, token.type)
+            self.eat(ID)
 
         op = self.current_token
 
@@ -301,6 +316,18 @@ class Parser:
         right = None
         if token.type in (CONST_INTEGER, CONST_FLOAT):
             right = self.expr()
+
+        elif self.current_token.type == ID and self.lexer.current_char == "[":
+            token = self.current_token
+            self.eat(ID)
+            self.eat(OPEN_INDEX)
+            index = self.expr()
+            self.eat(CLOSE_INDEX)
+            right = ListVar(token, index)
+
+        elif self.current_token.type == ID:
+            right = Var(token.value, token.type)
+            self.eat(ID)
 
         elif self.current_token.type in STRING:
             right = self.concatenation()
@@ -468,13 +495,15 @@ class Parser:
             _from = Num(self.current_token)
             self.eat(CONST_INTEGER)
         elif self.current_token.type == ID:
-            _from = Var(self.current_token.type, self.current_token.value)
-            self.eat(ID)
+            _from = Var(self.current_token.value, self.expr())
 
         self.eat(TO)
-
-        _to = self.current_token.value
-        self.eat(CONST_INTEGER)
+        _to = 0
+        if self.current_token.type == CONST_INTEGER:
+            _to = Num(self.current_token)
+            self.eat(CONST_INTEGER)
+        elif self.current_token.type == ID:
+            _to = Var(self.current_token.value, self.expr())
 
         _step = 1
 
@@ -492,7 +521,17 @@ class Parser:
     def assignment_statement(self):
         id_token = self.current_token
         self.eat(ID)
-        self.eat(ASSIGN)
+
+        isList = False
+        index = 0
+        if self.current_token.type is OPEN_INDEX:
+            isList = True
+            self.eat(OPEN_INDEX)
+            index = self.expr()
+            self.eat(CLOSE_INDEX)
+            self.eat(ASSIGN)
+        else:
+            self.eat(ASSIGN)
 
         value = None
         if self.current_token.type in (CONST_INTEGER, CONST_FLOAT, STRING, ID):
@@ -501,8 +540,10 @@ class Parser:
                 value = self.expr()
             elif token.type is STRING:
                 value = self.concatenation()
-
-        return Assignment(id_token, value)
+        if isList:
+            return AssignmentList(id_token, value, index)
+        else:
+            return Assignment(id_token, value)
 
     def continue_statement(self):
         self.eat(CONTINUE)
@@ -532,7 +573,7 @@ class Interpreter(NodeVisitor):
     def visit_Repetition(self, node):
 
         _from = self.visit(node._from)
-        _to = node._to
+        _to = self.visit(node._to)
         _step = node.step
 
         for i in range(_from, _to, _step):
@@ -609,11 +650,21 @@ class Interpreter(NodeVisitor):
         self.GLOBAL_SCOPE[node.name] = node.value
 
     def visit_Assignment(self, node):
-        if self.GLOBAL_SCOPE.__contains__(node.id):
-            self.GLOBAL_SCOPE[node.id] = self.visit(node.value)
+        self.GLOBAL_SCOPE[node.id] = self.visit(node.value)
+
+    def visit_AssignmentList(self, node):
+        index = self.visit(node.index)
+
+        if index <= 0 or index > self.GLOBAL_SCOPE[node.id].__len__():
+            raise IndexError("list assignment index out of range")
+
+        self.GLOBAL_SCOPE[node.id][index - 1] = self.visit(node.value)
 
     def visit_Var(self, node):
-        return self.GLOBAL_SCOPE[node.value]
+        return self.GLOBAL_SCOPE[node.name]
+
+    def visit_ListVar(self, node):
+        return self.GLOBAL_SCOPE[node.name][self.visit(node.index) - 1]
 
 
 #     Symbol Table Builder
@@ -632,7 +683,9 @@ class SymbolTableBuilder(NodeVisitor):
     def visit_Selction(self, node):
         self.visit(node.cond)
         self.visit(node.true_statements)
-        self.visit(node.false_statements)
+
+        if node.false_statements is not None:
+            self.visit(node.false_statements)
 
 
     def visit_Repetition(self, node):
@@ -689,11 +742,24 @@ class SymbolTableBuilder(NodeVisitor):
 
         self.visit(node.value)  # left of =
 
+    def visit_AssignmentList(self, node):
+
+        symbol_name = node.id
+
+        if self.symbolTable.lockup(symbol_name) is None:
+            raise NameError(f"Undefined '{str(node.id)}'")
+
+        self.visit(node.value)  # left of =
+
     def visit_Var(self, node):
         var_name = node.name
         if self.symbolTable.lockup(var_name) is None:
-            raise NameError(var_name)
+            raise NameError(f"Undefined '{var_name}'")
 
+    def visit_ListVar(self, node):
+        var_name = node.name
+        if self.symbolTable.lockup(var_name) is None:
+            raise NameError(f"Undefined '{var_name}'")
 
 
 if __name__ == "__main__":

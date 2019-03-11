@@ -52,6 +52,15 @@ class Assignment:
         self.value = value
 
 
+class AssignmentList:
+
+    def __init__(self, token, value, index):
+        self.token = token
+        self.id = self.token.value
+        self.value = value
+        self.index = index
+
+
 class BinOp:
 
     def __init__(self, op, left, right):
@@ -93,6 +102,14 @@ class Var:
     def __init__(self, name, value):
         self.name = name
         self.value = value
+
+
+class ListVar:
+
+    def __init__(self, token, index):
+        self.token = token
+        self.name = token.value
+        self.index = index
 
 
 class ListDec:
