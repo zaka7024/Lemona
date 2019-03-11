@@ -36,6 +36,12 @@ class Repetition:
         self.statements = statements
 
 
+class RepetitionWhile:
+    def __init__(self, expr, statements):
+        self.exp = expr
+        self.statements = statements
+
+
 class Stop:
     pass
 

@@ -25,6 +25,7 @@ class Lexer:
         "FROM": Token(FROM, FROM),
         "TO": Token(TO, TO),
         "STEP": Token(STEP, STEP),
+        "WHILE": Token(WHILE, WHILE),
         "STOP": Token(STOP, STOP),
         "CONTINUE": Token(CONTINUE, CONTINUE)
     }
@@ -405,7 +406,7 @@ class Parser:
     def statements_list(self):
         statements_list = []
 
-        while self.current_token.type in (IF, LET, FROM, ID, CONTINUE):
+        while self.current_token.type in (IF, LET, FROM, ID, WHILE, CONTINUE):
             token = self.current_token
             if token.type == IF:
                 statements_list.append(self.selection_statement())
@@ -415,6 +416,9 @@ class Parser:
 
             if token.type == FROM:
                 statements_list.append(self.repetition_statement())
+
+            if token.type == WHILE:
+                statements_list.append(self.while_statement())
 
             if token.type == CONTINUE:
                 statements_list.append(self.continue_statement())
@@ -517,6 +521,14 @@ class Parser:
         statements_list = self.statements_list()
         self.eat(END)
         return Repetition(_from, _to, statements_list, _step)
+
+    def while_statement(self):
+        self.eat(WHILE)
+        expr = self.cond_expr()
+        self.eat(COLON)
+        statements = self.statements_list()
+        self.eat(END)
+        return RepetitionWhile(expr, statements)
 
     def assignment_statement(self):
         id_token = self.current_token
@@ -666,7 +678,15 @@ class Interpreter(NodeVisitor):
     def visit_ListVar(self, node):
         return self.GLOBAL_SCOPE[node.name][self.visit(node.index) - 1]
 
+    def visit_RepetitionWhile(self, node):
+        while self.visit(node.exp):
+            self.visit(node.statements)
 
+#     Symbol Table Builder
+#      ------------------
+#      ------------------
+#      ------------------
+#      ------------------
 #     Symbol Table Builder
 
 class SymbolTableBuilder(NodeVisitor):
@@ -687,6 +707,9 @@ class SymbolTableBuilder(NodeVisitor):
         if node.false_statements is not None:
             self.visit(node.false_statements)
 
+    def visit_RepetitionWhile(self, node):
+        self.visit(node.exp)
+        self.visit(node.statements)
 
     def visit_Repetition(self, node):
 
